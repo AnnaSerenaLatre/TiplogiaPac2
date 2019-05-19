@@ -1,0 +1,263 @@
+---
+title: "Integració i Neteja de dades en el fitxer train.csv"
+author: "ANNA SERENA LATRE / XAVIER JORDÀ MURRIA"
+date: "17 maig de 2019"
+output: 
+  html_document:
+    fig_height: 5
+    fig_width: 7
+    number_sections: yes
+    theme: journal
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+  word_document: default
+---
+
+
+ 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(Rcmdr)
+library(abind, pos=26)
+library(e1071, pos=27)
+library(pscl)
+train <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/train.csv")
+```
+
+El fitxer train comta amb 891 files i 12 columnes.
+```{r}
+# train datasaet dimensions.
+dim(train)
+```
+
+Els noms de les 12 variables són:
+```{r}
+# train dataset variables names:
+names(train)
+```
+La tipologia de les dades en les variables és:
+```{r}
+# train data type:
+str(train)
+```
+
+Resum numèric amb les dades estadístiques més rellevants:
+```{r}
+# Statistical summary for train variables.
+summary(train)
+```
+# Integració de dades en el fitxer train.csv.
+
+
+## Supressió de les variables PassengerId i Ticket.
+```{r}
+# Variables name display.
+names(train)
+```
+
+
+```{r}
+# Deleting PassengerId and Ticket variables. 
+Train <- subset(train, select=c(2,3,4,5,6,7,8,10,11,12))
+```
+## Conversió de les variables categòriques a factorial.
+
+*Test factorial:
+```{r}
+# Categorical variables factorial test. 
+is.factor(Train$Survived)
+is.factor(Train$Pclass)
+is.factor(Train$Sex)
+is.factor(Train$SibSp)
+is.factor(Train$Parch)
+is.factor(Train$Cabin)
+is.factor(Train$Embarked)
+```
+
+Ho hi ha cap variable categòrica a factor.
+
+*Factorialització:
+```{r}
+# Categorical variables factorization. 
+Train$Survived <- as.factor(Train$Survived)
+Train$Pclass <- as.factor(Train$Pclass)
+Train$Sex <- as.factor(Train$Sex)
+Train$SibSp <- as.factor(Train$SibSp)
+Train$Parch <- as.factor(Train$Parch)
+Train$Cabin <- as.factor(Train$Cabin)
+Train$Embarked <- as.factor(Train$Embarked)
+```
+
+*Factorialització:
+```{r}
+# Categorical variables factorization. 
+
+Test$Pclass <- as.factor(Test$Pclass)
+
+```
+# Neteja de dades: Fitxer train.csv.
+## Casos de duplicats:
+```{r}
+# Duplicated cases:
+table(duplicated(Train))
+```
+No hi ha casos de duplicats en el dataset Train.
+
+## Valoració i gestió dels valors NA.
+```{r}
+#  Detecting Na values:
+apply(Train, 2, function(x) any(is.na(x)))
+```
+Hi ha tres variables amb valors NA, la variable Age, Cabin i Embarked.
+```{r}
+# Amelia software package.
+library(Amelia)
+# missmap function for 
+missmap(Train, main = "Missing values vs observed")
+```
+
+
+En el gràfic observem com la variable **Cabin** es troba fortament afectada per la presència de valors NA i optarem per la seva supressió directa.
+
+La variable **Age** també es troba afectada per la presència de valors NA que intentarem reemplaçar per la mitja o bé knn. 
+
+La variable **Embarked** es troba  molt poc afectada per la presència de valors NA i procedirem a la supressió de les files en les observacions que els contenen.
+
+**Supressió de la variable Cabin i Name;**
+```{r}
+names(Train)
+```
+
+```{r}
+# Deleting cabin variable. 
+Train <- subset(Train, select=c(1,2,4,5,6,7,8,10))
+```
+
+Suprimim aquí la variable Name perquè ens ha estat útil en la identificació de duplicats innecessaris.
+
+```{r}
+# Train variable names display.
+names(Train)
+```
+
+**Reemplaçament dels valors NA per la mitja;**
+```{r}
+# Mean placing NA values on Age variable. 
+Train$Age[is.na(Train$Age)] <- mean(Train$Age, na.rm = T)
+```
+
+**Supressió de les files amb valors NA en la variable Embarked;**
+```{r}
+# Deleting Embarked rows with NA values.
+Train <- Train[!is.na(Train$Embarked),]
+rownames(Train) <- NULL
+```
+
+## Valors atípics: presència d'outliers.
+Variable edat:
+```{r}
+# Age boxplot with outlier displaying.
+boxplot(Train$Age, horizontal=TRUE, main="Train: Age boxplot", xlab="min :  0.42           mean : 29.69912           max: 80", ylab="Train$Age", col='red')
+```
+
+
+La variable edat compta amb uns sis outliers que responen a persones d'edat avançada entre 63 i 80 i els considerem casos atípics que entren dins una normalitat.
+
+Variable Fare: 
+```{r}
+# Fare boxplot with outlier displaying.
+boxplot(Train$Fare, horizontal=TRUE, main="Train: Fare boxplot", xlab="min :  0           mean : 32.20421           max: 12.32", ylab="Train$Fare", col='red')
+```
+
+
+En el Boxplot observem una quarantena de valors atípics en la variable de les tarifes dels bitllets, i segurament responen a clients que han pagat molt més que els altres per algun tipus de suite entre altres privilegis luxosos.
+
+# Consistència en les dades.
+## Valoració dels outliers en els intervals.
+
+```{r}
+# Age statistical summary.
+
+numSummary(Train[,"Age", drop=FALSE], 
+  statistics=c("mean", "sd", "IQR", "quantiles"), 
+  quantiles=c(0,.25,.5,.75,1))
+```
+
+Ja hem comentat que els registres anteriors en l'edat, encara que hi hagi valors considerats atípics, aquests errors no es deuen cap anotació errònia sinó que són reflexe de la realitat i en principi no suprimirem. 
+
+```{r}
+# Fare statistical summary.
+numSummary(train[,"Fare", drop=FALSE], 
+  statistics=c("mean", "sd", "IQR", "quantiles"), 
+  quantiles=c(0,.25,.5,.75,1))
+```
+
+La distribució de la riquesa no és equitativa, i aquesta es concentra en poques mans, de manera que hi ha bitllets en una categoria de luxe, prop d'una quarantena que resulten desorbitats en el preu i que no suprimirem. 
+
+## Valoració de la validesa de les categories. 
+```{r}
+# Survive balance.
+table(Train$Survived)
+```
+
+
+Les etiquetes de clase tenen dues categories la de supervivents i la d'ofegats, la cateogira de supervivent respon a l'etiqueta 1 mentre que la categoria d'ofegats responen a l'etiqueta 0.
+```{r}
+# Travel class balance.
+table(train$Pclass)
+```
+```{r}
+contrasts(Train$Pclass)
+```
+
+Hi ha tres tipus de categories de viatge en funció de l'estatus socio-econòmic, la de classe alta que respon al valor 1, classe mitja que respon al valor 2 i classe baixa que respon al valor 3.
+```{r}
+# Gender balance.
+table(train$Sex)
+```
+```{r}
+contrasts(Train$Sex)
+```
+La variable sexe presenta dues categories la female(dones) representades per el valor 0 i la male (homes) representants en valor 1.
+```{r}
+# Familiar relationships: brothers and sisters, husband and wifes.
+table(train$SibSp)
+```
+```{r}
+contrasts(Train$SibSp)
+```
+La variable SibSp respon al nombre de relacions abord que disposa l'individu en quant a nombres de germans, germanastres o bé cònjugues.
+
+En el factor igual a zero indentifiquem individus que no tenen cap tipus de relació d'aquest tipus abord.
+
+```{r}
+# Familiar relationships: mother and father, child, son & daughter.
+table(train$Parch)
+```
+```{r}
+contrasts(Train$Parch)
+```
+La variable Parch identifica el nombre de relacions famliars de progenitors o descendents abord.
+
+Per un valor a 0 s'entén que l'individu no té cap tipus de relació d'aquest tipus abord. 
+```{r}
+# Origin city port embarkment.
+table(train$Embarked)
+```
+```{r}
+contrasts(Train$Embarked)
+```
+Hi ha tres port d'origen en els quan embarquen els passatgers C = Cherbourg, Q = Queenstown i S = Southampton.
+
+
+# Fitxer per a la prova analítica
+## Fitxer Train_T
+```{r}
+# Saving and integrated and cleaned data as Train_T.csv file
+write.csv(Train, file="Train.csv")
+```
+
+# Webgrafia
