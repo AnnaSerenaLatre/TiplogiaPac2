@@ -1,0 +1,261 @@
+---
+title: "Integració i Neteja del fitxer test.csv"
+author: "ANNA SERENA LATRE/XAVIER JORDÀ MURRIA"
+date: "19 maig de 2019"
+output: 
+  html_document:
+    fig_height: 5
+    fig_width: 7
+    number_sections: yes
+    theme: journal
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+  word_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(Rcmdr)
+library(abind, pos=26)
+library(e1071, pos=27)
+test <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/test.csv")
+```
+
+La dimensió del fitxer test és de 418 files i 11 columnes.
+```{r}
+# test dataset dimension.
+dim(test)
+``` 
+
+Els noms de les onze variables són: 
+```{r}
+# test dataset variable names.
+names(test)
+```
+Tipologia de les dades en cada variable:
+```{r}
+# Data variable type.
+str(test)
+```
+
+Resum numèric amb les dades estadístiques més rellevants:
+```{r}
+# Satistical variable summary.
+summary(test)
+```
+# Integració de dades en el fitxer test.csv:
+
+
+## Supressió de les variables PassengerId i Ticket.
+```{r}
+# Variables name display.
+names(test)
+```
+```{r}
+# Deleting PassengerId and Ticket variables. 
+Test <- subset(test, select=c(2,3,4,5,6,7,9,10,11))
+```
+## Conversió de les variables categòriques a factorial.
+*Test factorial:
+```{r}
+# Categorical variables factorial test. 
+
+is.factor(Test$Pclass)
+is.factor(Test$Sex)
+is.factor(Test$SibSp)
+is.factor(Test$Parch)
+is.factor(Test$Cabin)
+is.factor(Test$Embarked)
+```
+
+Ho hi ha cap variable categòrica a factor.
+
+*Factorialització:
+```{r}
+# Categorical variables factorization. 
+
+Test$Pclass <- as.factor(Test$Pclass)
+
+```
+
+# Neteja de dades en el fitxer test.csv:
+
+## Casos de duplicats.
+
+```{r}
+# Duplicated cases:
+table(duplicated(Test))
+```
+En el dataset test no hi ha duplicats.
+
+## Valoració i gestió dels valors NA.
+```{r}
+#  Detecting Na values on test dataset:
+apply(Test, 2, function(x) any(is.na(x)))
+```
+En el dataset test hi ha valors NA en les variables **Age**, **Fare** i **Cabin**.
+```{r}
+# Amelia software package.
+library(Amelia)
+# missmap function for 
+missmap(Test, main = "Missing values vs observed")
+```
+
+
+
+En el gràfic observem com la variable **Cabin** es troba fortament afectada per la presència de valors NA i optem per la seva supressió directa tal i com hem fet en el fitxer anterior.
+
+La variable **Age** també es troba afectada per la presència de valors NA que intentarem reemplaçar per la mitja o bé knn. 
+
+La variable **Fare** es troba  molt poc afectada per la presència de valors NA i procedirem a la supressió de les files en les observacions que els contenen.
+
+**Supressió de la variable Cabin i Name;**
+```{r}
+# Variable names display.
+names(Test)
+```
+
+```{r}
+# Supressing Cabin and Name variable. 
+Test <- subset(Test, select=c(1,3,4,5,6,7,9))
+```
+
+Suprimim aquí la variable Name perquè inicialment ens ha estat útil en la identificació de duplicats innecessaris.
+
+```{r}
+# Train variable names display.
+names(Test)
+```
+**Reemplaçament de valors NA per la mitja:**
+```{r}
+# Deleting NA values from Age variable. 
+Test$Age[is.na(Test$Age)] <- mean(Test$Age, na.rm = T)
+```
+
+**Supressió de les files de la variable Fare amb valors NA:**
+```{r}
+# Deleting Embarked rows with NA values.
+Test <- Test[!is.na(Test$Fare),]
+rownames(Test) <- NULL
+```
+
+
+
+
+## Valors atípics: presència d'outliers.
+Variable edat: 
+```{r}
+# Age boxplot with outlier displaying.
+boxplot(Test$Age, horizontal=TRUE, main="Test: Age boxplot", xlab="min : 0.17           mean : 30.27259           max: 76", ylab="Test$Age", col='red')
+```
+En el fitxer test observem dos outliers en la variable edat.  
+
+Variable Fare:
+```{r}
+# Fare boxplot with outlier displaying.
+boxplot(test$Fare, horizontal=TRUE, main="Test: Fare boxplot", xlab="min :  0           mean : 35.62719           max: 512.3292", ylab="Test$Fare", col='red')
+```
+
+
+
+Els outliers en la variable tarifa es troben entorn d'una trentena en uns registres coherents amb el dataset Train.
+
+
+# Consistència en les dades.
+## Valoració dels outliers en els intervals.
+```{r}
+# Statistical summary for age variable in test dataset.
+
+numSummary(test[,"Age", drop=FALSE], 
+  statistics=c("mean", "sd", "IQR", "quantiles"), 
+  quantiles=c(0,.25,.5,.75,1))
+```
+
+Ja hem comentat que els registres anteriors en l'edat, encara que hi hagi valors considerats atípics, aquests errors no es deuen cap anotació errònia sinó que són reflexe de la realitat i en principi no suprimirem. 
+
+```{r}
+# Statistical summary for Fare variable in test dataset.
+
+numSummary(test[,"Fare", drop=FALSE], 
+  statistics=c("mean", "sd", "IQR", "quantiles"), 
+  quantiles=c(0,.25,.5,.75,1))
+```
+
+La distribució de la riquesa no és equitativa, i aquesta es concentra en poques mans, de manera que hi ha bitllets en una categoria de luxe, prop d'una quarantena que resulten desorbitats en el preu i que no suprimirem.
+
+## Valoració de la validesa de les categories. 
+
+
+```{r}
+# Travel class balance.
+table(Test$Pclass)
+```
+```{r}
+contrasts(Test$Pclass)
+```
+
+Hi ha tres tipus de categories de viatge en funció de l'estatus socio-econòmic, la de classe alta que respon al valor 1, classe mitja que respon al valor 2 i classe baixa que respon al valor 3, en una funció de densitat similar a la del fitxer Train.
+
+```{r}
+# Gender balance.
+table(Test$Sex)
+```
+```{r}
+contrasts(Test$Sex)
+```
+
+La variable sexe presenta dues categories la female(dones) representades per el valor 0 i la male (homes) representants en valor 1, en una distribució de densitat similar a la del fitxer Train.
+
+```{r}
+# familiar relationships: brothers&sisters, husbands and wifes.
+table(Test$SibSp)
+```
+
+```{r}
+contrasts(Test$SibSp)
+```
+
+La variable SibSp respon al nombre de relacions abord que disposa l'individu en quant a nombres de germans, germanastres o bé cònjugues.
+
+En el factor igual a zero indentifiquem individus que no tenen cap tipus de relació d'aquest tipus abord.
+
+La variable SibSp en la funció de densitat mostra un comportament similar a la variable SibSP en el fitxer Train guardant una proporcionalitat. 
+
+```{r}
+# familiar relationships: mother, father, children, son, daughter.
+table(Test$Parch)
+```
+
+```{r}
+contrasts(Test$Parch)
+```
+
+
+La variable Parch identifica el nombre de relacions famliars de progenitors o descendents abord.
+
+Per un valor a 0 s'entén que l'individu no té cap tipus de relació d'aquest tipus abord. 
+```{r}
+# Origin city embarkment balance.
+table(Test$Embarked)
+```
+
+```{r}
+contrasts(Test$Embarked)
+```
+Hi ha tres port d'origen en els quan embarquen els passatgers C = Cherbourg, Q = Queenstown i S = Southampton.
+
+# Dataset per a la prova analítica Test:
+## Dataset Test_T.
+```{r}
+# Saving and integrated and cleaned data as Train_T.csv file
+write.csv(Test, file="Test_T.csv")
+```
+
+
+# Webgrafia
+
+
