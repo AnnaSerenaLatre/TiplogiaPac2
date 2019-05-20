@@ -18,10 +18,12 @@ output:
 
 ```{r}
 library(readr)
-Train_T <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/TipologiaPAC2/Train_T.csv")
+Train_T <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/TipologiaPAC2/output_data/Train_T.csv")
 
-Test_T <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/TipologiaPAC2/Test_T.csv")
+Test_T <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/TipologiaPAC2/output_data/Test_T.csv")
 ```
+Per defecte els datasets amb les pràctiques d'integració i neteja guarden una nova variable amb la indexació dels registres que suprimirem.
+
 ```{r}
 names(Test_T)
 ```
@@ -38,9 +40,24 @@ names(Train_T)
 Train_T <- subset(Train_T, select=c(2,3,4,5,6,7,8,9))
 ```
 
+# ANOVA test:
+## Contrast de diferències en la variable Sex i la variable Age.
+```{r}
+fit <- aov(Survived ~ Sex*Age, data=Train_T)
+fit
+# Two Way Factorial Design 
+```
+## Constrast de diferències entre la variable Sex i la variable Pclass. 
+```{r}
+fit <- aov(Survived ~ Sex*Pclass, data=Train_T) # same thing
+fit
+# Two Way Factorial Design 
+```
 
-# Analítica: Models de classificació, regressió i segmentació.
-## Model de regressió logística: 
+
+
+# Regressió logística:
+## Model de regressió logística.
 ```{r}
 reg.model =glm(Survived ~., family = binomial(link = 'logit'), data = Train_T)
 summary(reg.model)
@@ -73,7 +90,7 @@ pR2(reg.model)
 
 
 
-### Prova train&test per al model de regressió logística.
+## Prova train&test per al model de regressió logística.
 ```{r}
 titanic_predict = predict(reg.model, newdata = subset(Test_T, select = c(1:8), type='response'))
 head(titanic_predict)
@@ -109,7 +126,8 @@ str(auc)
 auc= auc@y.values[[1]]
 auc
 ```
-## Algorisme SVM : Suported Vectorial Machine.
+# SVM Suported Vectorial Machine:
+## Model SVM.
 ```{r}
 library(kernlab)
 svm.model <- ksvm(Survived ~ ., data = Train_T, kernel ='vanilladot')
@@ -118,7 +136,7 @@ svm.model <- ksvm(Survived ~ ., data = Train_T, kernel ='vanilladot')
 ```{r}
 svm.model
 ```
-### Prova train&test per a l'algorisme SVM. 
+## Prova train&test per a l'algorisme SVM. 
 
 ```{r}
 svm.predict <- predict(svm.model, Test_T[,1:8])
@@ -153,5 +171,9 @@ auc = auc@y.values[[1]]
 ```
 
 
-## Arbres de predicció.
-### Prova Train$Test per al model d'arbre.
+# Referències
+
+https://www.statmethods.net/stats/anova.html
+
+
+
