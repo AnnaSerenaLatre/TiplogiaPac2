@@ -9,3 +9,5 @@ Models de regressió, classificació i predicció.
 # Cas Titànic: plataforma kaggle. 
 
   Disponible a:  https://www.kaggle.com/c/titanic
+
+ANNA SERENA LATRE / XAVIER JORDÀ MURRIA
