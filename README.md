@@ -10,4 +10,6 @@ Models de regressió, classificació i predicció.
 
   Disponible a:  https://www.kaggle.com/c/titanic
 
+
+
 ANNA SERENA LATRE / XAVIER JORDÀ MURRIA
