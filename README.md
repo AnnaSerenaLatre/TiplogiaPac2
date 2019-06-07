@@ -1,10 +1,15 @@
 # TipologiaPac2
 
-Integració, Validació i Neteja de dades.
+Integració, Neteja i Validació de dades.
 
-Analítica descriptiva i inferencial.
+Analítica descriptiva.
+
+      - Arbres de decisió
 
 Models de regressió, classificació i predicció.
+      
+       - Model de Regressió logística.
+       - SVM
 
 # Cas Titànic: plataforma kaggle. 
 
