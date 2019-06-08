@@ -1,0 +1,415 @@
+---
+title: "Pràctiques_analítiques"
+author: "ANNA SERENA LATRE/XAVIER JORDÀ MURRIA"
+date: "19 maig de 2019"
+output: 
+  html_document:
+    fig_height: 5
+    fig_width: 7
+    number_sections: yes
+    theme: journal
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+  word_document: default
+---
+
+# Descàrrega de llibreries i base de dades.
+## Descàrrega de llibreries.
+```{r}
+# Packages download.
+library(readr)
+library(party)
+library(car)
+library(pscl)
+library(ROCR)
+library(kernlab)
+library(circlize)
+library(aod)
+ 
+```
+
+## Descàrrega de datasets.
+```{r}
+# Databases download.
+Train_T <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/TipologiaPAC2/output_data/Train_T.csv")
+
+Test_T <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/TipologiaPAC2/output_data/Test_T.csv")
+```
+Per defecte els datasets amb les pràctiques d'integració i neteja guarden una nova variable amb la indexació dels registres que suprimirem en els dos conjunts Train_T i Test_T.
+
+```{r}
+# Test_T variable names. 
+names(Test_T)
+```
+
+Suprimim la variable X1 en el conjunt Test_T.
+
+```{r}
+# Deleting x1 variable. 
+Test_T <- subset(Test_T, select=c(2,3,4,5,6,7,8,9))
+```
+```{r}
+# Train_T variables names. 
+names(Train_T)
+```
+
+Suprimim la variable X1 en el conjunt Train_T:
+
+```{r}
+# Deleting x1 variable. 
+Train_T <- subset(Train_T, select=c(2,3,4,5,6,7,8,9))
+```
+
+# Analítica descriptiva:
+
+Comentar que desestimem les tasques d'inferència estadística donat que les variables numèriques amb caràcter continu Age i Fare, com hem pogut comprovar en els fitxers Fitxer_Train.Rmd i Fitxer_Test.Rmd, no entren en la tipificació d'unes distribucions normals.
+
+En una aproximació a les dades, ens servim dels arbres de decisió per a una classificació dels sucessos èxit i fracàs segons la rellevància de les variables, perquè aquest algorisme aporta una visualització de les dades en una comprensió ràpida en una fase descriptiva inicial.
+
+## Arbres de decisió i suport gràfic.
+
+Ens cal una factorialització de les variables per tal que puguin interactuar en la regressió de l'arbre de decisió.
+```{r}
+# Categorical variables factorization. 
+Train_T$Survived <- as.factor(Train_T$Survived)
+Train_T$Pclass <- as.factor(Train_T$Pclass)
+Train_T$Sex <- as.factor(Train_T$Sex)
+Train_T$SibSp <- as.factor(Train_T$SibSp)
+Train_T$Parch <- as.factor(Train_T$Parch)
+Train_T$Embarked <- as.factor(Train_T$Embarked)
+```
+
+En un principi apliquem l'algorisme d'arbres de decisió en totes les variables del dataset Train_T partint de la variable succés Survived.
+
+```{r}
+# Decision tree with all Train_T variables.
+model_1 <- ctree(Survived~ ., data = Train_T)
+model_1
+plot(model_1)
+```
+
+L'arbre de decisió ens situa en primer lloc Sex com la variable amb més capacitat de segmentació partint de la variable Survived, en segon nivell situa la variable Pclass i en un tercer nivell situa la variable edat. Respectarem aquest ordre en l'anàlisi descriptiu posterior.
+
+Procedim a una valoració de la variable sexe segons el succés: supervivent o bé ofegat.
+
+```{r}
+# Classifier Tree Model for Survived and Sex variables.
+model_2 <- ctree(Survived~Sex, data = Train_T)
+model_2
+plot(model_2)
+```
+
+L'arbre de decisió ens mostra clarament com el segment femení disposa d'un succés supervivent (nº 1) proper al 80%, mentre que en el sector masculí l'esdeveniment supervivent (nº 1) és un segment minoritari proper a un 20%.
+
+Gràfic per a la visualització de les distribucions en les variables categòriques Survived i Sex.
+```{r}
+# Circular plot for Survived and sex factor relationships.
+donut <- data.frame(Train_T$Survived,Train_T$Sex)
+donut<- with(donut, table(Train_T$Survived, Train_T$Sex))
+ 
+
+# Make the circular plot
+chordDiagram(as.data.frame(donut), transparency = 0.5)
+```
+
+Procedim a una valoració en segon lloc de la variable Pclass segons el succés: supervivent o bé ofegat.
+
+```{r}
+# Classifier Tree Model for Survived and Pclass variables.
+model_3 <- ctree(Survived~Pclass, data = Train_T)
+model_3
+plot(model_3)
+```
+
+En el gràfic observem com els passatgers de primera categoria en un total de 214 sobreviuen en poc més d'un 60%, mentre que els pasatgers de segona categoria (en un segment minoritari 184 passatgers) sobreviuen en un 50% i finalment el segment majoritari de tercera categoria, en 491 passatgers els supvervivents sumen poc més d'un 20%.
+
+Gràfic per a la visualització de les distribucions en les variables categòriques Survived i Pclass.
+```{r}
+# Circular plot for Survived and Pclass factor relationships.
+donut <- data.frame(Train_T$Survived,Train_T$Pclass)
+donut<- with(donut, table(Train_T$Survived, Train_T$Pclass))
+ 
+
+# Make the circular plot
+chordDiagram(as.data.frame(donut), transparency = 0.5)
+```
+
+Procedim a una valoració de la variable Age segons el succés: supervivent o bé ofegat.
+
+```{r}
+# Classifier Tree Model for Survived and Age variables.
+model_2 <- ctree(Survived~Age, data = Train_T)
+model_2
+plot(model_2)
+```
+
+En el gràfic observem com els infants de sis o menys anys, malgrat ser un segment minoritari i vulnerable sobreviuen en un 70% aproximadament i ens consta que entre els ofegats només hi havia una nena de primera classe.
+
+
+Procedim a una valoració de la variable Age segons el succés Pclass: primera, segona i tercera categoria.
+
+```{r}
+# Classifier Tree Model for Pclass and Age variables.
+model_3 <- ctree(Pclass~Age, data = Train_T)
+model_3
+plot(model_3)
+```
+
+
+
+En general observem com el segment més nombrós són les persones menors de 35 anys, amb un total de 656 individus, els quals es concentren en la tercera categoria i per tant constatem que varen morir moltes persones joves.
+
+
+
+Les conclusions a es quals arribem són:
+
+      El perfil majoritari de les persones ofegades és el d'una persona jove       que viatja en tercera categoria. 
+      El perfil majoritari de les persones supervivents és el d'una dona que       viatja en primera categoria. 
+
+      Les consignes de salvament que donaven preferència als infants i les        dones en els bots de salvament es varen complir amb més o menys             rigorositat. 
+
+
+
+
+# Models de regressió, classificació i predicció:
+## Model de regressió logística.
+
+L'algorisme de regressió logística no ens accepta la variable Parch en les proves Train&Test i per tant la suprimim.
+```{r}
+names(Train_T)
+names(Test_T)
+```
+```{r}
+# Deleting Parch variable. 
+Train_T <- subset(Train_T, select=c(1,2,3,4,5,7,8))
+names(Train_T)
+# Deleting Parch variable. 
+Test_T <- subset(Test_T, select=c(1,2,3,4,5,7,8))
+names(Test_T)
+```
+
+
+Model de regressió logística per al conjunt de dades Train_T, amb la variable dependent Survived.
+
+```{r}
+# Logistic regression model.
+reg.model =glm(Survived ~., family = binomial(link = 'logit'), data = Train_T)
+summary(reg.model)
+```
+
+En el model de regressió logística observem com les variables que d'entrada eren més rellevants en les tasques d'agrupament i classificació con Sex, Pclass i Age, obtenen un p-valor molt proper a zero i inferior al nivell de significació 0.5, i per tant són estadísticament significatives. 
+
+Per altra banda les variables SibSp, Fare i Embarked no són estadísticament significatives.
+
+
+
+```{r}
+confint(reg.model)
+```
+
+
+```{r}
+exp(cbind(OR = coef(reg.model), confint(reg.model)))
+```
+
+Inferència ANOVA per el model de regressió logística per a l'analítica de les desviacions:
+
+```{r}
+# ANOVA test for the regression model.
+anova(reg.model, Test="Chisq")
+```
+
+Dades complementàries del model : 
+
+```{r}
+pR2(reg.model)
+```
+
+
+
+## Prova train&test per al model de regressió logística.
+
+Factorialitzem les variables en el conjunt test per tal que siguin vàlides per els models algorísmics:
+
+```{r}
+# Categorical variables factorization. 
+
+Test_T$Pclass <- as.factor(Test_T$Pclass)
+Test_T$Sex <- as.factor(Test_T$Sex)
+Test_T$SibSp <- as.factor(Test_T$SibSp)
+Test_T$Embarked <- as.factor(Test_T$Embarked)
+```
+
+Prediccions del model de regressió logística:
+
+```{r}
+# Linear Regression model predictment.
+titanic_predict <- predict(reg.model, newdata = subset(Test_T,select = c(1:7),  type='response'))
+head(titanic_predict)
+```
+
+
+```{r}
+titanic_predict <- ifelse(titanic_predict > 0.5, 1,0)
+head(titanic_predict)
+```
+```{r}
+# Logistic regression true and false matrix. 
+table(titanic_predict, Test_T$Survived)
+```
+En la matriu de confussió observem els encerts del model de regresssió logística i la component erràtica en relació als supervivents i ofegats. En aquest sentit classifica erròniament 4 ofegats que eren supervivents i altrament classifica erròniament 30 supervivents que són ofegats.
+
+El model de regressió logística mostra una accuracy molt bona en una capacitat de predicció d'un 91'86%.
+
+```{r}
+# Logistic regression model error.
+misClassificError = mean(titanic_predict != Test_T$Survived)
+# Logistic regression accuracy.
+print(paste('Accuracy', 1 - misClassificError))
+```
+
+
+```{r}
+# ROC curve for positivie and false TRUE.
+
+p<- predict(reg.model, newdata = Test_T, type='response')
+pr <- prediction(p, Test_T$Survived)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+
+
+```
+
+La corba Roc ens corrobora la capacitat del model proper a l'angle 1 de l'esquerra per el qual optmiza l'encert en la ràtio dels vertaders positius i minimitza l'error en la ràtio dels Falsos positius.
+
+```{r}
+# AUC performance.
+auc <- performance(pr, measure="auc")
+str(auc)
+```
+
+El punt optimitzador en la corva ROC del model és de 97'58 %. 
+
+```{r}
+# AUC value. 
+auc= auc@y.values[[1]]
+auc
+```
+
+El model de regressió logística és un bon model predictor.
+
+
+
+## Model SVM Suported Vectorial Machine.
+
+```{r}
+# Databases download.
+Train_T <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/TipologiaPAC2/output_data/Train_T.csv")
+
+Test_T <- read_csv("C:/Users/ANNA/Desktop/Tipologia i cicle de vida de les dades/TipologiaPAC2/output_data/Test_T.csv")
+```
+
+
+```{r}
+# Deleting x1 variable. 
+Test_T <- subset(Test_T, select=c(2,3,4,5,6,7,8))
+Train_T <- subset(Train_T, select=c(2,3,4,5,6,7,8))
+```
+
+
+Procedim a la construcció d'un model SVM Suport Vectorial Machine en el conjunt Train_T.
+
+```{r}
+# SVM model construction. 
+
+svm.model <- ksvm(Survived ~ ., data = Train_T, kernel ='vanilladot')
+```
+
+Resultats del model SVM en el conjunt Train_T:
+
+```{r}
+# SVM parameter model and results. 
+svm.model
+```
+
+
+## Prova train&test per a l'algorisme SVM. 
+
+Proves de la capacitat predictiva del model SVM:
+
+```{r}
+# SVM predictments.
+svm.predict <- predict(svm.model, Test_T[,1:7])
+head(svm.predict)
+```
+```{r}
+svm.predict = ifelse(svm.predict > 0.5, 1, 0)
+```
+
+Mariu de confussió del model SVM:
+
+```{r}
+# SVM true and false matrix. 
+table(svm.predict, Test_T$Survived)
+```
+
+Observem com el model procedeix amb una classificació òptima sense component erràtica.
+
+```{r}
+# SVM error model.
+misClassifiError = mean(svm.predict != Test_T$Survived)
+# SVM accuracy model. 
+print(paste('Accuracy', 1 - misClassifiError))
+```
+
+L'accuracy del model SVM és d'una capacitat predicitva òptima d'un 100%.
+
+```{r}
+# Plotting SVM true and false positives. 
+p = predict(svm.model, newdata = subset(Test_T, select=c(1:7)), type='response')
+pr = prediction(p, Test_T$Survived)
+prf = performance(pr, measure = 'tpr', x.measure ='fpr')
+plot(prf)
+abline(0,1, lwd =2, lty =2)
+```
+
+En la corba ROC observem com el model es troba en l'angle 1 de l'esquerre optimitzant la capacitat predictiva i minimitzant l'error a 0.
+
+```{r}
+# SVM AUC performance. 
+auc = performance(pr, measure = 'auc')
+str(auc)
+```
+
+El punt AUC òptim del model SVM és 1.
+
+```{r}
+# SVM auc value. 
+auc <- auc@y.values[[1]]
+auc
+```
+
+
+
+
+# Referències
+
+
+***Stackoverflow (2019)*** Solucions data mining i analítiques. Disseny del lloc web/logo©2019 Stack Exchange Inc: contribucions d’usuaris llicenciats en cc by-sa 3.0.  
+
+Disponible a:
+https://es.stackoverflow.com/
+
+***Statmethods.net (2019)***  Quick R – by DataCamp. Kaabacoff, R.I.; ‘ANOVA’ . Copyright © 2012 Robert I. Kabacoff, Ph.D. 
+
+Disponible a: 
+https://www.statmethods.net/stats/anova.html
+
+***Rpubs.com (2019)*** Brought to you by RStudio. Li, E.C.; ‘Titanic Survival Analysis Using Logisic Regression’. Easy web publishing. RStudio™ Support. 
+
+Disponible a: 
+https://rstudio-pubs-static.s3.amazonaws.com/283447_fd922429e1f0415c89b93b6da6dc1ccc.html
+
+
